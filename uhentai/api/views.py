@@ -2,6 +2,8 @@ from .serializers import ChapterSerializer, GenreSerializer, SeriesSerializer
 from .permissions import IsOwnerOrReadOnly
 from core.models import Chapter, Genre, Series
 from rest_framework import viewsets, permissions, mixins
+from django.conf import settings
+import os
 
 
 # Create your views here.
@@ -20,7 +22,13 @@ class SeriesViewSet(mixins.CreateModelMixin,
 	permission_classes = [IsOwnerOrReadOnly, permissions.IsAuthenticatedOrReadOnly]
 
 	def perform_create(self, serializer):
-		return serializer.save(owner=self.request.user)
+		series = serializer.save(owner=self.request.user)
+		try:
+			os.makedirs(os.path.join(settings.MEDIA_ROOT, str(series.id)))
+		except OSError:
+			series.delete()
+			return (500, 'Can\'t create series')
+		return series
 
 
 class ChapterViewSet(mixins.CreateModelMixin,
